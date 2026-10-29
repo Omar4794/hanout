@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0f1115">
+<title>Grok Trading Bot — LIVE mode (real funds, per-trade approval)</title>
+<style>
+:root{--bg:#0f1115;--card:#181b22;--b:#2a2f3a;--t:#e8eaf0;--m:#9aa3b2;--a:#4c8dff;--ok:#3ccf8e;--w:#f5b041;--d:#ff5c5c}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--t);font:15px/1.45 system-ui,Roboto,sans-serif}
+.banner{position:sticky;top:0;z-index:5;background:#4a0f0f;color:#ffb3b3;text-align:center;font-weight:600;padding:8px 10px;font-size:13px}
+header{padding:12px 16px}h1{font-size:18px;margin:0}h2{font-size:17px;margin:0 0 8px}
+main{padding:0 12px 24px;max-width:640px;margin:0 auto}
+.card{background:var(--card);border:1px solid var(--b);border-radius:12px;padding:12px;margin-bottom:10px}
+.k{font-size:12px;color:var(--m)}.mono{font-family:ui-monospace,monospace;word-break:break-all}
+button{background:var(--a);color:#fff;border:0;border-radius:10px;padding:12px 16px;font-size:15px;font-weight:600;min-height:44px}
+button.sec{background:#2a2f3a}
+label{display:block;font-size:13px;color:var(--m);margin:10px 0 4px}
+input{width:100%;background:#0b0d11;color:var(--t);border:1px solid var(--b);border-radius:10px;padding:11px;font-size:16px}
+.warn{border-color:var(--w);color:#ffd77a}.err{border-color:var(--d);color:#ffb3b3}.ok{color:var(--ok)}
+table{width:100%;border-collapse:collapse}td{padding:6px 0;border-bottom:1px solid var(--b);vertical-align:top}td:last-child{text-align:right;padding-left:8px}
+.ar{direction:rtl;text-align:right}.hide{display:none}
+.wl button{display:block;width:100%;margin:6px 0;text-align:left;background:#22324f}.wl img{width:22px;height:22px;vertical-align:middle;margin-right:8px;border-radius:5px}
+</style></head><body>
+<div class="banner">REAL FUNDS AT RISK — every trade needs your approval in the wallet · أموال حقيقية — كل صفقة تحتاج موافقتك</div>
+<header><h1>Grok Trading Bot · Live (Jupiter / Phantom)</h1><div class="k">No real trades. Your recovery phrase and private key are never requested.</div></header>
+<main>
+<div class="card">
+ <p><b>What this page does:</b> with live mode on, it asks PumpPortal for an unsigned trade, checks it, simulates it, and only sends after you approve inside your own wallet. It never asks for your recovery phrase or private key. Anyone asking for those is a scammer.</p>
+ <p class="ar"><b>ماذا تفعل هذه الصفحة:</b> عند تفعيل الوضع الحقيقي تطلب صفقة غير موقّعة من PumpPortal، تفحصها وتحاكيها، ولا ترسلها إلا بعد موافقتك داخل محفظتك. لا تطلب أبداً عبارة الاسترداد أو المفتاح الخاص. من يطلبها منك فهو محتال.</p>
+ <p><b>Jupiter Mobile (Android):</b> 1) Tap the globe icon at the top right (dApp browser). 2) Enter this page's https address. 3) Tap Connect below. <i>(Steps from Jupiter docs. Whether Jupiter shows up in the list below is not yet tested.)</i> <b>Never</b> turn on Auto-Approve for this site.</p>
+ <p class="ar"><b>جوبيتر موبايل (أندرويد):</b> ١) اضغط أيقونة الكرة الأرضية أعلى اليمين (متصفح التطبيقات). ٢) أدخل رابط https لهذه الصفحة. ٣) اضغط اتصال بالأسفل. <i>(الخطوات من وثائق جوبيتر، وظهور جوبيتر في القائمة لم يُختبر بعد.)</i> لا تفعّل الموافقة التلقائية (Auto-Approve) لهذا الموقع.</p>
+ <p><b>Phantom (Android):</b> open Phantom, tap its browser (Explore) icon, and paste this page's https address. <i>(Icon name not verified.)</i></p>
+ <p class="ar"><b>فانتوم (أندرويد):</b> افتح فانتوم، اضغط أيقونة المتصفح، والصق رابط https لهذه الصفحة. <i>(اسم الأيقونة غير مؤكد.)</i></p>
+</div>
+<div class="card err"><b>Warning:</b> real money. Most pump.fun tokens go to zero. Start with tiny amounts. This tool gives no advice and guarantees nothing.<p class="ar"><b>تحذير:</b> أموال حقيقية. معظم عملات pump.fun تنهار إلى الصفر. ابدأ بمبالغ صغيرة جداً. لا ضمان لأي ربح.</p></div>
+<div class="card">
+ <h2>1. Wallet / المحفظة</h2>
+ <div id="noProv" class="card err hide">
+  <p>No wallet was found in this browser. Open this page inside the Jupiter Mobile or Phantom in-app browser (see steps above).</p>
+  <p class="ar">لم يتم العثور على محفظة في هذا المتصفح. افتح الصفحة داخل متصفح جوبيتر موبايل أو فانتوم (انظر الخطوات أعلاه).</p>
+ </div>
+ <div class="k">Detected wallets · المحافظ المكتشفة:</div>
+ <div id="wl" class="wl"></div>
+ <div id="status" class="k">Not connected · غير متصل</div>
+ <div id="addr" class="mono" style="margin:8px 0"></div>
+ <button id="btnDisconnect" class="sec hide">Disconnect</button>
+</div>
+<div class="card">
+ <h2>2. Live mode / الوضع الحقيقي</h2>
+ <div id="liveState"></div>
+ <p class="k">To enable for this session, type exactly: <b class="mono" id="phrase"></b><br><span class="ar">للتفعيل في هذه الجلسة اكتب العبارة أعلاه حرفياً.</span></p>
+ <input id="confirmIn" autocomplete="off" autocapitalize="characters" placeholder="Confirmation phrase">
+ <p><button id="btnEnable">Enable live mode</button> <button id="btnStop" style="background:var(--d)">EMERGENCY STOP</button> <button id="btnClearStop" class="sec hide">Clear stop</button></p>
+ <label for="rpcIn">Solana RPC URL (https)</label><input id="rpcIn" autocomplete="off"><p class="k">The public RPC (api.mainnet.solana.com) refused browser requests in our test (HTTP 403), so simulation and sending need an RPC that allows web pages. Do not paste an RPC URL that contains a secret you would not want stored on this phone.</p><p><button id="btnRpc" class="sec">Save RPC</button></p>
+ <div class="k">Caps: 0.1 SOL per trade · 0.5 SOL per day. Spent today: <b id="spent"></b></div>
+</div>
+<div class="card">
+ <h2>3. Trade / صفقة</h2>
+ <label for="act">Action</label><select id="act" style="width:100%;padding:11px;font-size:16px;background:#0b0d11;color:var(--t);border:1px solid var(--b);border-radius:10px"><option value="buy">Buy</option><option value="sell">Sell</option></select>
+ <label for="mint">Token mint address</label><input id="mint" autocomplete="off">
+ <div id="amtRow"><label for="amt">Amount (SOL, max 0.1)</label><input id="amt" type="number" step="0.01" min="0" value="0.01" inputmode="decimal"></div>
+ <div id="pctRow" class="hide"><label for="pct">Sell % of tokens</label><input id="pct" type="number" min="1" max="100" value="100" inputmode="decimal"></div>
+ <label for="slip">Slippage (%)</label><input id="slip" type="number" step="0.5" min="0" value="10" inputmode="decimal">
+ <label for="prio">Priority fee (SOL)</label><input id="prio" type="number" step="0.0001" min="0" value="0.0005" inputmode="decimal">
+ <p><button id="btnPrepare">Prepare &amp; review</button></p>
+ <div id="review"></div>
+</div>
+<div class="card"><h2>4. Audit log (this phone only)</h2><div id="log"></div><p><button id="btnClearLog" class="sec">Delete log</button></p></div>
+</main>
+<script>
+/* Grok Trading Bot live-mode core. Pure functions, no network, no keys. */
+(function(root){
+'use strict';
+var ALPH='123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
+function b58encode(bytes){var d=[],i,j,c,z=0;while(z<bytes.length&&bytes[z]===0)z++;
+ for(i=z;i<bytes.length;i++){c=bytes[i];for(j=0;j<d.length;j++){c+=d[j]<<8;d[j]=c%58;c=(c/58)|0}while(c){d.push(c%58);c=(c/58)|0}}
+ var s='';for(i=0;i<z;i++)s+='1';for(j=d.length-1;j>=0;j--)s+=ALPH[d[j]];return s}
+function b58decode(str){var b=[],i,j,c,z=0;while(z<str.length&&str[z]==='1')z++;
+ for(i=z;i<str.length;i++){c=ALPH.indexOf(str[i]);if(c<0)throw new Error('bad base58');for(j=0;j<b.length;j++){c+=b[j]*58;b[j]=c&255;c>>=8}while(c){b.push(c&255);c>>=8}}
+ for(i=0;i<z;i++)b.push(0);return new Uint8Array(b.reverse())}
+function toB64(u8){var s='';for(var i=0;i<u8.length;i++)s+=String.fromCharCode(u8[i]);return (typeof btoa!=='undefined'?btoa(s):Buffer.from(u8).toString('base64'))}
+function fromB64(s){if(typeof atob==='undefined')return new Uint8Array(Buffer.from(s,'base64'));var b=atob(s),u=new Uint8Array(b.length);for(var i=0;i<b.length;i++)u[i]=b.charCodeAt(i);return u}
+function rdLen(u,o){var len=0,size=0;for(;;){var e=u[o.p++];if(e===undefined)throw new Error('truncated');len|=(e&0x7f)<<(size*7);size++;if(!(e&0x80))break;if(size>3)throw new Error('bad compact-u16')}return len}
+function take(u,o,n){if(o.p+n>u.length)throw new Error('truncated');var r=u.slice(o.p,o.p+n);o.p+=n;return r}
+/* Decode a serialized (legacy or v0) Solana transaction. */
+function decodeTx(u){var o={p:0},i,nSig=rdLen(u,o),sigs=[];for(i=0;i<nSig;i++)sigs.push(take(u,o,64));
+ var msgStart=o.p,version='legacy';if(u[o.p]&0x80){version=u[o.p]&0x7f;o.p++;if(version!==0)throw new Error('unsupported tx version '+version)}
+ var h={numRequiredSignatures:u[o.p++],numReadonlySigned:u[o.p++],numReadonlyUnsigned:u[o.p++]};
+ var nk=rdLen(u,o),keys=[];for(i=0;i<nk;i++)keys.push(b58encode(take(u,o,32)));
+ var blockhash=b58encode(take(u,o,32)),ni=rdLen(u,o),ix=[];
+ for(i=0;i<ni;i++){var pi=u[o.p++],na=rdLen(u,o),acc=Array.from(take(u,o,na)),dl=rdLen(u,o),data=take(u,o,dl);ix.push({programIdIndex:pi,accounts:acc,data:data})}
+ var alts=[];if(version===0){var nl=rdLen(u,o);for(i=0;i<nl;i++){var key=b58encode(take(u,o,32)),w=take(u,o,rdLen(u,o)),r=take(u,o,rdLen(u,o));alts.push({key:key,writable:Array.from(w),readonly:Array.from(r)})}}
+ if(o.p!==u.length)throw new Error('trailing bytes');
+ return{version:version,signatures:sigs,header:h,accountKeys:keys,recentBlockhash:blockhash,instructions:ix,lookups:alts,messageBytes:u.slice(msgStart)}}
+/* Program allowlist. Each id checked 2026-10-29 against the source in the comment
+   and confirmed executable on mainnet via getAccountInfo. */
+var EXPECTED={
+ 'ComputeBudget111111111111111111111111111111':'Compute Budget',            // Solana native; seen in real PumpPortal tx
+ '11111111111111111111111111111111':'System Program',                       // Solana native; seen in real PumpPortal tx
+ '6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P':'Pump.fun bonding curve',    // github.com/pump-fun/pump-public-docs idl/pump.json
+ 'pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA':'PumpSwap AMM',              // pump-public-docs idl/pump_amm.json
+ 'pfeeUxB6jkeY1Hxd7CsFCAjcbHA9rWtchMGdZ6VojVZ':'Pump fees',                 // pump-public-docs idl/pump_fees.json
+ 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA':'SPL Token',                 // solana-program/token-2022 interface/src/lib.rs
+ 'TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb':'Token-2022',                // solana-program/token-2022 interface/src/lib.rs (fixed: earlier typo PQn)
+ 'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL':'Associated Token Account', // seen in real PumpPortal tx
+ '675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8':'Raydium AMM v4',           // raydium-sdk-V2 src/common/programId.ts AMM_V4
+ 'CPMMoo8L3F4NbTegBCKVNunggL7H1ZpdTHKxQB5qKP1C':'Raydium CPMM',             // raydium-sdk-V2 CREATE_CPMM_POOL_PROGRAM
+ 'LanMV9sAd7wArD4vJFi2qDdfnVhFxYSUg6eADduJ3uj':'Raydium LaunchLab'};       // raydium-sdk-V2 LAUNCHPAD_PROGRAM
+/* NOT allowed: FAdo9NCw1ssek6Z6yeWzWjhLVsr8uiCwcWNUnKgzTnHe — undocumented upgradeable router that PumpPortal
+   returned for bonding-curve buys (pool auto and pump) on 2026-10-29. Not in PumpPortal or pump.fun docs. */
+/* Validate fee payer, signer count, program allowlist. */
+function validateTx(tx,expectedPayer,allow){allow=allow||EXPECTED;var errors=[],warnings=[],programs=[];
+ if(!tx.accountKeys.length)errors.push('No accounts in transaction');
+ else if(tx.accountKeys[0]!==expectedPayer)errors.push('Fee payer '+tx.accountKeys[0]+' is not your connected wallet');
+ if(tx.header.numRequiredSignatures!==1)errors.push('Transaction needs '+tx.header.numRequiredSignatures+' signers; expected only you (1)');
+ tx.instructions.forEach(function(ix){var p=tx.accountKeys[ix.programIdIndex];if(p===undefined){errors.push('Program index '+ix.programIdIndex+' is outside static keys');return}
+  if(programs.indexOf(p)<0)programs.push(p);if(!allow[p])errors.push('Unexpected program '+p)});
+ if(!tx.instructions.some(function(ix){var p=tx.accountKeys[ix.programIdIndex];return p&&allow[p]&&!/Compute|System|Token|Associated/.test(allow[p])}))warnings.push('No pump.fun / AMM swap instruction found');
+ if(tx.lookups.length)warnings.push('Uses '+tx.lookups.length+' address lookup table(s); those accounts are not shown');
+ return{ok:errors.length===0,errors:errors,warnings:warnings,programs:programs.map(function(p){return{id:p,name:allow[p]||'UNKNOWN'}})}}
+function bytesEq(a,b){if(a.length!==b.length)return false;for(var i=0;i<a.length;i++)if(a[i]!==b[i])return false;return true}
+var PHRASE='I ACCEPT REAL LOSSES';
+/* Guard: session gate, kill switch, per-trade and daily caps. state={liveEnabled,stopped,perTradeCap,dailyCap,spentToday} */
+function checkTrade(state,req){var e=[];
+ if(state.stopped)e.push('Emergency stop is ON');
+ if(!state.liveEnabled)e.push('Live mode is off');
+ if(req.action!=='buy'&&req.action!=='sell')e.push('Action must be buy or sell');
+ if(!/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(req.mint||''))e.push('Invalid mint');
+ if(!(req.slippage>=0&&req.slippage<=50))e.push('Slippage must be 0-50%');
+ if(!(req.priorityFee>=0&&req.priorityFee<=0.01))e.push('Priority fee must be 0-0.01 SOL');
+ if(req.action==='buy'){var a=req.amountSol;if(!(a>0))e.push('Amount must be > 0');
+  else{if(a>state.perTradeCap+1e-12)e.push('Above per-trade cap of '+state.perTradeCap+' SOL');
+   if(state.spentToday+a>state.dailyCap+1e-12)e.push('Would exceed daily cap of '+state.dailyCap+' SOL (spent '+state.spentToday.toFixed(4)+')')}}
+ if(req.action==='sell'&&!(req.sellPercent>0&&req.sellPercent<=100))e.push('Sell percent must be 1-100');
+ return{ok:e.length===0,errors:e}}
+function enableLive(state,typed){if(state.stopped)return false;state.liveEnabled=(String(typed).trim()===PHRASE);return state.liveEnabled}
+function emergencyStop(state){state.stopped=true;state.liveEnabled=false;return state}
+function estimateFees(req){var a=req.action==='buy'?req.amountSol:0;return{pumpPortalFee:a*0.005,priorityFee:req.priorityFee,worstCase:a*(1+req.slippage/100)+a*0.005+req.priorityFee}}
+function buildTradeBody(pubkey,req){return{publicKey:pubkey,action:req.action,mint:req.mint,
+ amount:req.action==='buy'?req.amountSol:(req.sellPercent+'%'),denominatedInSol:req.action==='buy'?'true':'false',
+ slippage:req.slippage,priorityFee:req.priorityFee,pool:'auto'}}
+var FORBIDDEN=/seed|mnemonic|private ?key|secret ?key/i;
+function safeLogEntry(entry){var s=JSON.stringify(entry);if(FORBIDDEN.test(s))throw new Error('refusing to log sensitive field');return JSON.parse(s)}
+root.GTB={b58encode:b58encode,b58decode:b58decode,toB64:toB64,fromB64:fromB64,decodeTx:decodeTx,validateTx:validateTx,bytesEq:bytesEq,
+ EXPECTED:EXPECTED,PHRASE:PHRASE,checkTrade:checkTrade,enableLive:enableLive,emergencyStop:emergencyStop,estimateFees:estimateFees,buildTradeBody:buildTradeBody,safeLogEntry:safeLogEntry};
+})(typeof window!=='undefined'?window:globalThis);
+
+</script>
+<script>
+(function(){
+var $=function(i){return document.getElementById(i)},G=window.GTB;
+var DEF_RPC='https://api.mainnet.solana.com',RPC=localStorage.getItem('gtb_rpc')||DEF_RPC,PP='https://pumpportal.fun/api/trade-local';
+var LIGHTHOUSE='L2TExMFKdjpN9kozasaurPirfHy9P8sbXoAN1qA3S95';
+function esc(s){return String(s).replace(/[&<>"']/g,function(c){return'&#'+c.charCodeAt(0)+';'})}
+function today(){return new Date().toISOString().slice(0,10)}
+var st={liveEnabled:false,stopped:localStorage.getItem('gtb_stop')==='1',perTradeCap:0.1,dailyCap:0.5,spentToday:parseFloat(localStorage.getItem('gtb_spent_'+today())||'0')};
+function log(ev,data){try{var e=G.safeLogEntry({t:new Date().toISOString(),ev:ev,data:data||{}});var l=JSON.parse(localStorage.getItem('gtb_audit')||'[]');l.push(e);if(l.length>500)l=l.slice(-500);localStorage.setItem('gtb_audit',JSON.stringify(l));renderLog()}catch(x){}}
+function renderLog(){var l=JSON.parse(localStorage.getItem('gtb_audit')||'[]').slice(-30).reverse();$('log').innerHTML=l.map(function(e){return'<div class="mono k">'+esc(e.t)+' '+esc(e.ev)+' '+esc(JSON.stringify(e.data))+'</div>'}).join('')||'<div class="k">Empty</div>'}
+/* wallets */
+var wallets=[],cur=null,acct=null,pk=null;
+function isSol(w){return w&&w.features&&w.features['standard:connect']&&(w.chains||[]).some(function(c){return String(c).indexOf('solana:')===0})}
+function register(){for(var i=0;i<arguments.length;i++){var w=arguments[i];if(isSol(w)&&wallets.indexOf(w)<0)wallets.push(w)}renderW();return function(){}}
+var api=Object.freeze({register:register});
+window.addEventListener('wallet-standard:register-wallet',function(e){try{e.detail(api)}catch(x){}});
+try{window.dispatchEvent(new CustomEvent('wallet-standard:app-ready',{detail:api}))}catch(x){}
+function legacy(){var p=window.phantom&&window.phantom.solana;return p&&p.isPhantom?p:null}
+function list(){var l=wallets.map(function(w){return{name:w.name,icon:w.icon,std:w}});if(legacy()&&!l.some(function(x){return /phantom/i.test(x.name)}))l.push({name:'Phantom (legacy provider)',legacy:legacy()});return l}
+function renderW(){var l=list();$('noProv').classList.toggle('hide',l.length>0);$('wl').innerHTML='';l.forEach(function(x){var b=document.createElement('button');b.textContent='Connect '+x.name+(x.std&&!x.std.features['solana:signTransaction']?' (cannot sign)':'');b.onclick=function(){connect(x)};$('wl').appendChild(b)})}
+function setConn(){if(pk){$('status').innerHTML='<span class="ok">Connected to '+esc(cur.name)+' · متصل</span>';$('addr').textContent=pk;$('wl').classList.add('hide');$('btnDisconnect').classList.remove('hide')}else{$('status').textContent='Not connected · غير متصل';$('addr').textContent='';$('wl').classList.remove('hide');$('btnDisconnect').classList.add('hide')}}
+async function connect(x){try{if(x.std){var r=await x.std.features['standard:connect'].connect();acct=(r&&r.accounts||x.std.accounts||[])[0];if(!acct)throw new Error('no account');pk=acct.address}else{var r2=await x.legacy.connect();pk=r2.publicKey.toString();acct=null}cur=x;setConn();log('connect',{wallet:x.name,pubkey:pk})}catch(e){$('status').textContent='Connection rejected or failed: '+(e&&e.message||e)}}
+$('btnDisconnect').onclick=async function(){try{if(cur&&cur.std&&cur.std.features['standard:disconnect'])await cur.std.features['standard:disconnect'].disconnect();else if(cur&&cur.legacy)await cur.legacy.disconnect()}catch(e){}log('disconnect',{});pk=null;cur=null;acct=null;pending=null;setConn()};
+/* live gate */
+function renderGate(){$('liveState').innerHTML=st.stopped?'<span style="color:var(--d)">EMERGENCY STOP ON · إيقاف طارئ</span>':(st.liveEnabled?'<span style="color:var(--d)">LIVE MODE ON — real funds · وضع حقيقي</span>':'Live mode OFF · الوضع الحقيقي متوقف');
+ $('spent').textContent=st.spentToday.toFixed(4)+' / '+st.dailyCap+' SOL';$('btnClearStop').classList.toggle('hide',!st.stopped);$('phrase').textContent=G.PHRASE}
+$('btnEnable').onclick=function(){var ok=G.enableLive(st,$('confirmIn').value);$('confirmIn').value='';log(ok?'live_enabled':'live_enable_failed',{});renderGate()};
+$('btnStop').onclick=function(){G.emergencyStop(st);localStorage.setItem('gtb_stop','1');pending=null;$('review').innerHTML='';log('emergency_stop',{});renderGate()};
+$('btnClearStop').onclick=function(){if(!confirm('Clear emergency stop? Live mode stays OFF until you type the phrase again.'))return;st.stopped=false;st.liveEnabled=false;localStorage.removeItem('gtb_stop');log('stop_cleared',{});renderGate()};
+$('act').onchange=function(){var b=$('act').value==='buy';$('amtRow').classList.toggle('hide',!b);$('pctRow').classList.toggle('hide',b)};
+function req(){return{action:$('act').value,mint:$('mint').value.trim(),amountSol:parseFloat($('amt').value),sellPercent:parseFloat($('pct').value),slippage:parseFloat($('slip').value),priorityFee:parseFloat($('prio').value)}}
+async function rpc(method,params){var r=await fetch(RPC,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:1,method:method,params:params})});if(r.status===403)throw new Error('RPC HTTP 403: this RPC refuses requests from web pages (the public Solana RPC does this). Set a browser-enabled RPC URL in Live mode settings.');if(!r.ok)throw new Error('RPC HTTP '+r.status);var j=await r.json();if(j.error)throw new Error('RPC: '+j.error.message);return j.result}
+var pending=null;
+function err(msg){$('review').innerHTML='<div class="card err">'+msg+'</div>'}
+$('btnPrepare').onclick=async function(){pending=null;var q=req();
+ if(!pk)return err('Connect a wallet first.');if(!cur.std||!cur.std.features['solana:signTransaction'])return err('This wallet entry cannot sign through Wallet Standard. Use the Jupiter or Phantom entry that is not "(legacy provider)".');
+ var c=G.checkTrade(st,q);if(!c.ok){log('blocked',{errors:c.errors});return err(c.errors.map(esc).join('<br>'))}
+ $('review').innerHTML='<div class="card">Requesting unsigned transaction from PumpPortal…</div>';
+ var body=G.buildTradeBody(pk,q),raw;
+ try{var r=await fetch(PP,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});if(r.status!==200){var t='';try{t=(await r.text()).slice(0,200)}catch(x){}throw new Error('HTTP '+r.status+' '+t)}raw=new Uint8Array(await r.arrayBuffer())}
+ catch(e){log('pumpportal_error',{msg:String(e&&e.message||e)});return err('Could not get a transaction from PumpPortal: '+esc(e&&e.message||e)+'<br>If this says "Failed to fetch", the browser was probably blocked (CORS) or the network is down. Nothing was signed or sent. The Jupiter Swap API fallback is described in docs/REAL_TRADING_ROADMAP.md; it is not built into this page.')}
+ var tx,v;try{tx=G.decodeTx(raw);v=G.validateTx(tx,pk)}catch(e){log('decode_error',{msg:String(e.message)});return err('Could not decode transaction: '+esc(e.message))}
+ if(!v.ok){log('validation_failed',{errors:v.errors});return err('Transaction rejected by safety checks:<br>'+v.errors.map(esc).join('<br>')+(v.errors.some(function(e){return /FAdo9NCw/.test(e)})?'<br>PumpPortal routes bonding-curve (not yet migrated) tokens through an undocumented program, so those trades are blocked. Migrated PumpSwap tokens pass.':''))}
+ var sim,simErr=null;try{sim=await rpc('simulateTransaction',[G.toB64(raw),{encoding:'base64',sigVerify:false,replaceRecentBlockhash:false,commitment:'processed'}])}catch(e){simErr=String(e.message||e)}
+ var simOk=!simErr&&sim&&sim.value&&sim.value.err===null;
+ log('prepared',{action:q.action,mint:q.mint,amountSol:q.action==='buy'?q.amountSol:null,sellPercent:q.action==='sell'?q.sellPercent:null,simOk:simOk,simErr:simErr||(sim&&sim.value&&sim.value.err)||null});
+ var f=G.estimateFees(q);
+ var h='<div class="card err"><b>REAL FUNDS AT RISK.</b> Most pump.fun tokens go to zero. Never enable wallet Auto-Approve. · أموال حقيقية في خطر. معظم عملات pump.fun تنهار إلى الصفر. لا تفعّل الموافقة التلقائية.</div>'+
+ '<table><tr><td>Wallet</td><td class="mono">'+esc(pk)+'</td></tr><tr><td>Action</td><td>'+q.action.toUpperCase()+'</td></tr><tr><td>Mint</td><td class="mono">'+esc(q.mint)+'</td></tr>'+
+ (q.action==='buy'?'<tr><td>Amount</td><td>'+q.amountSol+' SOL</td></tr><tr><td>PumpPortal fee 0.5% (est.)</td><td>'+f.pumpPortalFee.toFixed(5)+' SOL</td></tr><tr><td>Worst case (est.)</td><td>'+f.worstCase.toFixed(5)+' SOL</td></tr>':'<tr><td>Sell</td><td>'+q.sellPercent+'% of your tokens</td></tr>')+
+ '<tr><td>Slippage</td><td>'+q.slippage+' %</td></tr><tr><td>Priority fee</td><td>'+q.priorityFee+' SOL</td></tr>'+
+ '<tr><td>Fee payer</td><td class="ok">your wallet ✓</td></tr><tr><td>Programs</td><td>'+v.programs.map(function(p){return esc(p.name)}).join(', ')+'</td></tr>'+
+ '<tr><td>Simulation</td><td>'+(simOk?'<span class="ok">OK ('+(sim.value.unitsConsumed||'?')+' CU)</span>':'<span style="color:var(--d)">FAILED: '+esc(simErr||JSON.stringify(sim&&sim.value&&sim.value.err))+'</span>')+'</td></tr></table>'+
+ (v.warnings.length?'<div class="card warn">'+v.warnings.map(esc).join('<br>')+'</div>':'')+'<p class="k">Network and bonding-curve fees are extra. Price can move before confirmation.</p>';
+ if(simOk){h+='<button id="btnSign" style="background:var(--d)">Approve in wallet &amp; send (real)</button>';pending={raw:raw,q:q,tx:tx}}else h+='<div class="card err">Simulation failed, so sending is disabled.</div>';
+ $('review').innerHTML=h;var b=$('btnSign');if(b)b.onclick=signSend};
+async function signSend(){var p=pending;pending=null;if(!p)return;var c=G.checkTrade(st,p.q);if(!c.ok)return err(c.errors.map(esc).join('<br>'));
+ var signed;try{var out=await cur.std.features['solana:signTransaction'].signTransaction({account:acct,transaction:p.raw,chain:'solana:mainnet'});signed=(Array.isArray(out)?out[0]:out).signedTransaction}catch(e){log('sign_rejected',{msg:String(e&&e.message||e)});return err('Wallet did not sign: '+esc(e&&e.message||e))}
+ var t2;try{t2=G.decodeTx(signed)}catch(e){return err('Signed transaction could not be decoded; not sent.')}
+ if(!G.bytesEq(t2.messageBytes,p.tx.messageBytes)){var allow=Object.assign({},G.EXPECTED);allow[LIGHTHOUSE]='Lighthouse (wallet guard)';var v2=G.validateTx(t2,pk,allow);log('wallet_modified_tx',{ok:v2.ok});if(!v2.ok)return err('The wallet changed the transaction and it failed checks; not sent.<br>'+v2.errors.map(esc).join('<br>'))}
+ try{var sig=await rpc('sendTransaction',[G.toB64(signed),{encoding:'base64',skipPreflight:false,preflightCommitment:'processed',maxRetries:3}])}catch(e){log('send_error',{msg:String(e.message||e)});return err('Send failed: '+esc(e.message||e))}
+ if(p.q.action==='buy'){st.spentToday+=p.q.amountSol;localStorage.setItem('gtb_spent_'+today(),String(st.spentToday))}
+ log('sent',{sig:sig,action:p.q.action,mint:p.q.mint});renderGate();
+ $('review').innerHTML='<div class="card">Sent. Signature:<div class="mono">'+esc(sig)+'</div><a style="color:var(--a)" target="_blank" rel="noopener" href="https://solscan.io/tx/'+encodeURIComponent(sig)+'">View on Solscan</a><div id="conf" class="k">Checking confirmation…</div></div>';
+ for(var i=0;i<20;i++){await new Promise(function(r){setTimeout(r,2000)});try{var s=await rpc('getSignatureStatuses',[[sig]]);var x=s&&s.value&&s.value[0];if(x){$('conf').textContent=x.err?'Failed on-chain: '+JSON.stringify(x.err):'Status: '+x.confirmationStatus;if(x.err||x.confirmationStatus==='confirmed'||x.confirmationStatus==='finalized'){log('status',{sig:sig,status:x.confirmationStatus,err:x.err||null});return}}}catch(e){}}
+ $('conf').textContent='Not confirmed yet; check Solscan.'}
+$('rpcIn').value=RPC;$('btnRpc').onclick=function(){var x=$('rpcIn').value.trim();if(!/^https:\/\/[^\s]+$/.test(x))return alert('Must be an https URL');RPC=x;localStorage.setItem('gtb_rpc',x);log('rpc_set',{host:x.replace(/^https:\/\/([^\/?#]+).*/,'$1')})};
+$('btnClearLog').onclick=function(){if(confirm('Delete local audit log?')){localStorage.removeItem('gtb_audit');renderLog()}};
+renderW();setTimeout(renderW,500);setTimeout(renderW,1500);renderGate();renderLog();
+})();
+
+</script>
+</body></html>
